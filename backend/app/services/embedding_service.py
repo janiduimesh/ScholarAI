@@ -14,18 +14,18 @@ class EmbeddingService:
         # 1. Attempt Gemini Embedding
         if settings.LLM_PROVIDER == "gemini" and settings.GEMINI_API_KEY:
             try:
-                import google.generativeai as genai
-                genai.configure(api_key=settings.GEMINI_API_KEY)
-                # Call modern Gemini embedding model
-                result = genai.embed_content(
-                    model="models/text-embedding-004",
-                    content=text,
-                    task_type="retrieval_document"
+                from google import genai
+
+                client = genai.Client(api_key=settings.GEMINI_API_KEY)
+                result = client.models.embed_content(
+                    model="text-embedding-004",
+                    contents=text,
                 )
-                return result['embedding']
+                return result.embeddings[0].values
             except Exception as e:
                 # Fallback to local vector generation on API failure
                 pass
+
 
         # 2. Attempt OpenAI Embedding
         if settings.LLM_PROVIDER == "openai" and settings.OPENAI_API_KEY:

@@ -14,7 +14,7 @@ router = APIRouter(tags=["papers"])
 def upload_paper(
     project_id: int, 
     file: UploadFile = File(...), 
-    db: Session = Depends(get_db), 
+    db: Session = Depends(get_db),
     current_user: User = Depends(AuthService.get_current_user)
 ):
     project = ProjectService.get_project(db, project_id)
@@ -33,7 +33,7 @@ def upload_paper(
 @router.get("/projects/{project_id}/papers", response_model=List[PaperResponse])
 def get_project_papers(
     project_id: int, 
-    db: Session = Depends(get_db), 
+    db: Session = Depends(get_db),
     current_user: User = Depends(AuthService.get_current_user)
 ):
     project = ProjectService.get_project(db, project_id)
@@ -44,10 +44,9 @@ def get_project_papers(
 @router.delete("/papers/{paper_id}")
 def delete_paper(
     paper_id: int, 
-    db: Session = Depends(get_db), 
+    db: Session = Depends(get_db),
     current_user: User = Depends(AuthService.get_current_user)
 ):
-    # Retrieve project owner
     from app.repositories.paper_repository import PaperRepository
     paper = PaperRepository.get_by_id(db, paper_id)
     if not paper:
@@ -56,6 +55,6 @@ def delete_paper(
     project = ProjectService.get_project(db, paper.project_id)
     if not project or project.owner_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized to edit this project")
-        
+         
     success = PaperService.delete_paper(db, paper_id)
     return {"success": success, "message": "Paper and its vector index deleted successfully"}

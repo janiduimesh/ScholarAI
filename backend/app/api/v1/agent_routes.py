@@ -14,7 +14,7 @@ router = APIRouter(tags=["agents"])
 @router.post("/agents/run", response_model=AgentRunResponse)
 def run_agent_stage(
     request: AgentRunRequest, 
-    db: Session = Depends(get_db), 
+    db: Session = Depends(get_db),
     current_user: User = Depends(AuthService.get_current_user)
 ):
     project = ProjectService.get_project(db, request.project_id)
@@ -60,7 +60,7 @@ def run_agent_stage(
 def get_agent_logs(
     project_id: int, 
     limit: int = 100,
-    db: Session = Depends(get_db), 
+    db: Session = Depends(get_db),
     current_user: User = Depends(AuthService.get_current_user)
 ):
     project = ProjectService.get_project(db, project_id)
@@ -71,7 +71,7 @@ def get_agent_logs(
 @router.post("/projects/{project_id}/agent-logs/clear")
 def clear_agent_logs(
     project_id: int, 
-    db: Session = Depends(get_db), 
+    db: Session = Depends(get_db),
     current_user: User = Depends(AuthService.get_current_user)
 ):
     project = ProjectService.get_project(db, project_id)

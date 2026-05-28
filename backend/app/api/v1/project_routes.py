@@ -12,22 +12,22 @@ router = APIRouter(prefix="/projects", tags=["projects"])
 @router.post("/", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
 def create_project(
     project_in: ProjectCreate, 
-    db: Session = Depends(get_db), 
+    db: Session = Depends(get_db),
     current_user: User = Depends(AuthService.get_current_user)
 ):
-    return ProjectService.create_project(db, project_in, current_user.id)
+    return ProjectService.create_project(db, project_in, owner_id=current_user.id)
 
 @router.get("/", response_model=List[ProjectResponse])
 def read_projects(
-    db: Session = Depends(get_db), 
+    db: Session = Depends(get_db),
     current_user: User = Depends(AuthService.get_current_user)
 ):
-    return ProjectService.get_user_projects(db, current_user.id)
+    return ProjectService.get_user_projects(db, user_id=current_user.id)
 
 @router.get("/{project_id}", response_model=ProjectResponse)
 def read_project(
     project_id: int, 
-    db: Session = Depends(get_db), 
+    db: Session = Depends(get_db),
     current_user: User = Depends(AuthService.get_current_user)
 ):
     project = ProjectService.get_project(db, project_id)
@@ -39,7 +39,7 @@ def read_project(
 def update_project(
     project_id: int, 
     project_in: ProjectUpdate, 
-    db: Session = Depends(get_db), 
+    db: Session = Depends(get_db),
     current_user: User = Depends(AuthService.get_current_user)
 ):
     project = ProjectService.get_project(db, project_id)
@@ -50,7 +50,7 @@ def update_project(
 @router.delete("/{project_id}", status_code=status.HTTP_200_OK)
 def delete_project(
     project_id: int, 
-    db: Session = Depends(get_db), 
+    db: Session = Depends(get_db),
     current_user: User = Depends(AuthService.get_current_user)
 ):
     project = ProjectService.get_project(db, project_id)
