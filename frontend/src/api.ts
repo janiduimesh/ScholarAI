@@ -116,6 +116,52 @@ export async function createProject(title: string, description: string): Promise
   return await res.json();
 }
 
+export async function fetchProject(projectId: number): Promise<Project> {
+  const res = await fetch(`${API_BASE}/projects/${projectId}`, {
+    method: 'GET',
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch project details');
+  return await res.json();
+}
+
+export async function fetchProjectCitations(projectId: number): Promise<any[]> {
+  const res = await fetch(`${API_BASE}/projects/${projectId}/citations`, {
+    method: 'GET',
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch project citations');
+  return await res.json();
+}
+
+export async function addSupervisorFeedback(projectId: number, author: string, text: string): Promise<Project> {
+  const res = await fetch(`${API_BASE}/projects/${projectId}/feedback?author=${encodeURIComponent(author)}&text=${encodeURIComponent(text)}`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to add supervisor feedback');
+  return await res.json();
+}
+
+export async function resolveSupervisorFeedback(projectId: number, feedbackId: string, resolved: boolean = true): Promise<Project> {
+  const res = await fetch(`${API_BASE}/projects/${projectId}/feedback/${feedbackId}/resolve?resolved=${resolved}`, {
+    method: 'PUT',
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to resolve supervisor feedback');
+  return await res.json();
+}
+
+export async function addFeedbackReply(projectId: number, feedbackId: string, author: string, text: string): Promise<Project> {
+  const res = await fetch(`${API_BASE}/projects/${projectId}/feedback/${feedbackId}/reply?author=${encodeURIComponent(author)}&text=${encodeURIComponent(text)}`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to add reply to supervisor feedback');
+  return await res.json();
+}
+
+
 // --- Agent Endpoints ---
 
 export async function runAgent(projectId: number, agentName: string, instructions?: string): Promise<any> {
@@ -148,3 +194,68 @@ export async function fetchAgentLogs(projectId: number): Promise<AgentLog[]> {
     return [];
   }
 }
+
+// --- Paper Endpoints ---
+
+export async function uploadPaper(projectId: number, file: File): Promise<any> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const activeToken = localStorage.getItem('token');
+  const headers: HeadersInit = {};
+  if (activeToken) {
+    headers['Authorization'] = `Bearer ${activeToken}`;
+  }
+
+  const res = await fetch(`${API_BASE}/projects/${projectId}/papers`, {
+    method: 'POST',
+    headers: headers,
+    body: formData
+  });
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.detail || 'Failed to upload paper');
+  }
+  return await res.json();
+}
+
+export async function fetchProjectPapers(projectId: number): Promise<any[]> {
+  const res = await fetch(`${API_BASE}/projects/${projectId}/papers`, {
+    method: 'GET',
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch project papers');
+  return await res.json();
+}
+
+// --- Document Sections Endpoints ---
+
+export interface GeneratedSection {
+  id: number;
+  section_name: string;
+  content: string;
+  version: number;
+  created_at: string;
+  project_id: number;
+}
+
+export async function fetchProjectSections(projectId: number): Promise<GeneratedSection[]> {
+  const res = await fetch(`${API_BASE}/projects/${projectId}/sections`, {
+    method: 'GET',
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch project sections');
+  return await res.json();
+}
+
+export async function saveProjectSection(projectId: number, sectionName: string, content: string): Promise<GeneratedSection> {
+  const res = await fetch(`${API_BASE}/projects/${projectId}/sections`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ section_name: sectionName, content })
+  });
+  if (!res.ok) throw new Error('Failed to save project section draft');
+  return await res.json();
+}
+
+

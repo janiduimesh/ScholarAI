@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { fetchProjects, runAgent, Project } from '../api';
+import { fetchProjects, runAgent, fetchProjectPapers, fetchProjectCitations, Project } from '../api';
 
 interface DashboardPageProps {
   user: { name: string; email: string };
   onLogout: () => void;
-  onOpenProjectModal: () => void;
+  onOpenSetupWizard: () => void;
+  onOpenProjectHub: (project: Project) => void;
 }
 
-export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, onOpenProjectModal }) => {
+
+export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, onOpenSetupWizard, onOpenProjectHub }) => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [runningAgentMap, setRunningAgentMap] = useState<Record<number, boolean>>({});
+  const [totalPapers, setTotalPapers] = useState(0);
+  const [totalCitations, setTotalCitations] = useState(0);
 
   useEffect(() => {
     loadProjects();
@@ -23,6 +27,26 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
     try {
       const data = await fetchProjects();
       setProjects(data);
+
+      let papersCount = 0;
+      let citationsCount = 0;
+      try {
+        const counts = await Promise.all(
+          data.map(async (p) => {
+            const papersList = await fetchProjectPapers(p.id).catch(() => []);
+            const citationsList = await fetchProjectCitations(p.id).catch(() => []);
+            return { papers: papersList.length, citations: citationsList.length };
+          })
+        );
+        counts.forEach(item => {
+          papersCount += item.papers;
+          citationsCount += item.citations;
+        });
+      } catch (err) {
+        console.error('Error fetching dashboard counts:', err);
+      }
+      setTotalPapers(papersCount);
+      setTotalCitations(citationsCount);
     } catch (err: any) {
       console.error('Failed to load projects:', err);
       setErrorMsg('Failed to load projects from the database. Make sure the backend server is running.');
@@ -167,7 +191,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
         <div className="dashboard-header">
           <div className="welcome-widget">
             <h1 className="welcome-title">Good morning, {user.name.split(' ')[0]}</h1>
-            <p className="welcome-date">Wednesday, 27 May 2026</p>
+            <p className="welcome-date">{new Date().toLocaleDateString(undefined, {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'})}</p>
           </div>
           <div className="header-right">
             <button className="btn-icon">
@@ -176,7 +200,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
                 <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
               </svg>
             </button>
-            <button className="btn-primary" onClick={onOpenProjectModal}>
+            <button className="btn-primary" onClick={onOpenSetupWizard}>
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -194,15 +218,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
           </div>
           <div className="stat-card glass-card">
             <span className="stat-label">Papers reviewed</span>
-            <h3 className="stat-value">47</h3>
+            <h3 className="stat-value">{totalPapers}</h3>
           </div>
           <div className="stat-card glass-card">
             <span className="stat-label">Citations saved</span>
-            <h3 className="stat-value">124</h3>
+            <h3 className="stat-value">{totalCitations}</h3>
           </div>
           <div className="stat-card glass-card">
             <span className="stat-label">Exports done</span>
-            <h3 className="stat-value">8</h3>
+            <h3 className="stat-value">{projects.filter(p => p.stage.toLowerCase() === 'completed' || p.stage.toLowerCase() === 'formatting').length}</h3>
           </div>
         </section>
 
@@ -248,7 +272,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
                       <div className="project-info">
                         <h3 className="project-title">{proj.title}</h3>
                         <p className="project-meta">
-                          {format} - Started May 12 - {proj.stage} stage
+                          {format} - Started {new Date(proj.created_at).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})} - {proj.stage} stage
                         </p>
                       </div>
                       <span className={`stage-badge ${badgeClass}`}>{proj.stage}</span>
@@ -285,11 +309,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
 
                       <button 
                         className="btn-outline" 
-                        onClick={() => handleRunTopicAgent(proj)}
-                        disabled={runningAgentMap[proj.id]}
+                        onClick={() => onOpenProjectHub(proj)}
                         style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}
                       >
-                        {runningAgentMap[proj.id] ? 'Running...' : 'Open →'}
+                        Open →
                       </button>
                     </div>
                   </div>
@@ -298,6 +321,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
             )}
           </div>
         </section>
+
 
         {/* Dashboard Bottom Grid */}
         <div className="dashboard-bottom-grid">
@@ -384,7 +408,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
             <div className="quick-actions-card glass-card">
               <h3 className="section-title">Quick actions</h3>
               <div className="actions-list">
-                <button className="btn-secondary btn-action" onClick={onOpenProjectModal}>
+                <button className="btn-secondary btn-action" onClick={onOpenSetupWizard}>
+
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="12" y1="5" x2="12" y2="19"></line>
                     <line x1="5" y1="12" x2="19" y2="12"></line>

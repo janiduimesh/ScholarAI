@@ -2,14 +2,16 @@ import { useState, useEffect } from 'react';
 import { LandingPage } from './components/LandingPage';
 import { AuthPage } from './components/AuthPage';
 import { DashboardPage } from './components/DashboardPage';
-import { ProjectModal } from './components/ProjectModal';
-import { fetchCurrentUser } from './api';
+import { SetupWizard } from './components/SetupWizard';
+import { ProjectHub } from './components/ProjectHub';
+import { LiteratureSearch } from './components/LiteratureSearch';
+import { fetchCurrentUser, fetchProject, Project } from './api';
 import './App.css';
 
 function App() {
-  const [view, setView] = useState<'landing' | 'auth' | 'dashboard'>('landing');
+  const [view, setView] = useState<'landing' | 'auth' | 'dashboard' | 'setup-wizard' | 'project-hub' | 'literature-search'>('landing');
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
-  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [activeProject, setActiveProject] = useState<Project | null>(null);
   const [dashboardKey, setDashboardKey] = useState(0);
 
   useEffect(() => {
@@ -32,6 +34,7 @@ function App() {
   const handleLogout = () => {
     localStorage.removeItem('token');
     setUser(null);
+    setActiveProject(null);
     setView('landing');
   };
 
@@ -52,19 +55,61 @@ function App() {
       )}
 
       {view === 'dashboard' && (
-        <>
-          <DashboardPage
-            key={dashboardKey}
-            user={user || { name: 'Ayesha Fernando', email: 'ayesha.f@nus.edu.sg' }}
-            onLogout={handleLogout}
-            onOpenProjectModal={() => setIsProjectModalOpen(true)}
-          />
-          <ProjectModal
-            isOpen={isProjectModalOpen}
-            onClose={() => setIsProjectModalOpen(false)}
-            onProjectCreated={() => setDashboardKey((prev) => prev + 1)}
-          />
-        </>
+        <DashboardPage
+          key={dashboardKey}
+          user={user || { name: 'Ayesha Fernando', email: 'ayesha.f@nus.edu.sg' }}
+          onLogout={handleLogout}
+          onOpenSetupWizard={() => setView('setup-wizard')}
+          onOpenProjectHub={(project) => {
+            setActiveProject(project);
+            setView('project-hub');
+          }}
+        />
+      )}
+
+      {view === 'setup-wizard' && (
+        <SetupWizard
+          onBackToDashboard={() => setView('dashboard')}
+          onFinish={async (projectId) => {
+            try {
+              const proj = await fetchProject(projectId);
+              setActiveProject(proj);
+            } catch (err) {
+              console.error('Failed to fetch newly created project details:', err);
+              setActiveProject({
+                id: projectId,
+                title: 'Research Project',
+                description: 'Style: IEEE. Type: Journal paper',
+                stage: 'Topic Selection',
+                created_at: new Date().toISOString()
+              });
+            }
+            setView('project-hub');
+            setDashboardKey((prev) => prev + 1);
+          }}
+        />
+      )}
+
+      {view === 'project-hub' && activeProject && (
+        <ProjectHub
+          project={activeProject}
+          user={user || { name: 'Ayesha Fernando', email: 'ayesha.f@nus.edu.sg' }}
+          onBackToDashboard={() => setView('dashboard')}
+          onGoToLiteratureSearch={() => setView('literature-search')}
+          onProjectUpdate={(updatedProj) => setActiveProject(updatedProj)}
+        />
+      )}
+
+      {view === 'literature-search' && activeProject && (
+        <LiteratureSearch
+          project={activeProject}
+          user={user || { name: 'Ayesha Fernando', email: 'ayesha.f@nus.edu.sg' }}
+          onBackToHub={() => setView('project-hub')}
+          onProceedToGaps={(updatedProj) => {
+            setActiveProject(updatedProj);
+            setView('project-hub');
+          }}
+        />
       )}
     </>
   );
