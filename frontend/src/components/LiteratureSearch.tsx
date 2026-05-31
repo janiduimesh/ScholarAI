@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Project, 
-  runAgent, 
-  uploadPaper, 
-  fetchProjectPapers, 
-  fetchProject 
+import {
+  Project,
+  runAgent,
+  uploadPaper,
+  fetchProjectPapers,
+  fetchProject
 } from '../api';
 
 interface LiteratureSearchProps {
@@ -26,24 +26,24 @@ interface PaperResult {
   url?: string;
 }
 
-export const LiteratureSearch: React.FC<LiteratureSearchProps> = ({ 
-  project, 
+export const LiteratureSearch: React.FC<LiteratureSearchProps> = ({
+  project,
   user,
-  onBackToHub, 
-  onProceedToGaps 
+  onBackToHub,
+  onProceedToGaps
 }) => {
   const [query, setQuery] = useState(project.title);
   const [activeSources, setActiveSources] = useState<string[]>(['Semantic Scholar']);
   const [results, setResults] = useState<PaperResult[]>([]);
   const [dbPapers, setDbPapers] = useState<any[]>([]);
   const [localAddedPapers, setLocalAddedPapers] = useState<PaperResult[]>([]);
-  
+
   const [loading, setLoading] = useState(false);
   const [agentRunning, setAgentRunning] = useState(false);
   const [agentProgress, setAgentProgress] = useState(0);
   const [agentLog, setAgentLog] = useState('');
   const [uploadingFile, setUploadingFile] = useState(false);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadProjectPapers = async () => {
@@ -57,7 +57,7 @@ export const LiteratureSearch: React.FC<LiteratureSearchProps> = ({
 
   useEffect(() => {
     loadProjectPapers();
-    
+
     // Load local added papers from localStorage
     const saved = localStorage.getItem(`added_papers_${project.id}`);
     if (saved) {
@@ -67,7 +67,7 @@ export const LiteratureSearch: React.FC<LiteratureSearchProps> = ({
         console.error(e);
       }
     }
-    
+
     // Run initial search using project title
     handleSearch(project.title);
   }, [project.id]);
@@ -77,7 +77,7 @@ export const LiteratureSearch: React.FC<LiteratureSearchProps> = ({
     setLoading(true);
     try {
       const res = await fetch(`https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(searchQuery)}&limit=10&fields=title,authors,citationCount,abstract,year,url`);
-      
+
       const saved = localStorage.getItem(`added_papers_${project.id}`);
       const savedList: PaperResult[] = saved ? JSON.parse(saved) : [];
       const savedIds = new Set(savedList.map(p => p.id));
@@ -91,7 +91,7 @@ export const LiteratureSearch: React.FC<LiteratureSearchProps> = ({
           ? p.authors.map((a: any) => a.name).slice(0, 3).join(', ') + (p.authors.length > 3 ? ' et al.' : '')
           : 'Unknown Authors';
         const formattedAuthor = `${authorNames} - ${p.year || 'N/A'} - ${p.citationCount || 0} citations`;
-        
+
         const tags = ['Academic Paper'];
         if (p.citationCount > 100) tags.push('Highly Cited');
         if (p.year && p.year >= 2024) tags.push('Recent');
@@ -145,8 +145,8 @@ export const LiteratureSearch: React.FC<LiteratureSearchProps> = ({
           added: false
         }
       ];
-      setResults(fallbackResults.filter(p => 
-        p.title.toLowerCase().includes(searchQuery.toLowerCase().split(' ')[0]) || 
+      setResults(fallbackResults.filter(p =>
+        p.title.toLowerCase().includes(searchQuery.toLowerCase().split(' ')[0]) ||
         searchQuery.length < 15
       ));
     } finally {
@@ -157,7 +157,7 @@ export const LiteratureSearch: React.FC<LiteratureSearchProps> = ({
   const handleAddPaper = (paper: PaperResult) => {
     const updatedResults = results.map(r => r.id === paper.id ? { ...r, added: true } : r);
     setResults(updatedResults);
-    
+
     const updatedLocal = [...localAddedPapers, { ...paper, added: true }];
     setLocalAddedPapers(updatedLocal);
     localStorage.setItem(`added_papers_${project.id}`, JSON.stringify(updatedLocal));
@@ -166,14 +166,14 @@ export const LiteratureSearch: React.FC<LiteratureSearchProps> = ({
   const handleRemovePaper = (id: string) => {
     const updatedResults = results.map(r => r.id === id ? { ...r, added: false } : r);
     setResults(updatedResults);
-    
+
     const updatedLocal = localAddedPapers.filter(p => p.id !== id);
     setLocalAddedPapers(updatedLocal);
     localStorage.setItem(`added_papers_${project.id}`, JSON.stringify(updatedLocal));
   };
 
   const toggleSource = (source: string) => {
-    setActiveSources(prev => 
+    setActiveSources(prev =>
       prev.includes(source) ? prev.filter(s => s !== source) : [...prev, source]
     );
   };
@@ -197,12 +197,21 @@ export const LiteratureSearch: React.FC<LiteratureSearchProps> = ({
     }
   };
 
+  const STAGES_PAST_LITERATURE = ['Research Gap', 'Methodology', 'Writing', 'Review', 'Complete'];
+
   const handleProceedToGaps = async () => {
     if (agentRunning) return;
+
+    if (STAGES_PAST_LITERATURE.includes(project.stage)) {
+      const updatedProj = await fetchProject(project.id);
+      onProceedToGaps(updatedProj);
+      return;
+    }
+
     setAgentRunning(true);
     setAgentProgress(15);
     setAgentLog('Spawning Literature Review synthesis agent...');
-    
+
     const progressInterval = setInterval(() => {
       setAgentProgress(prev => {
         if (prev >= 90) return prev;
@@ -215,7 +224,7 @@ export const LiteratureSearch: React.FC<LiteratureSearchProps> = ({
       await runAgent(project.id, 'literature');
       setAgentProgress(100);
       setAgentLog('Literature synthesis successfully compiled! Pipeline advanced to Gaps stage.');
-      
+
       setTimeout(async () => {
         clearInterval(progressInterval);
         const updatedProj = await fetchProject(project.id);
@@ -514,7 +523,7 @@ export const LiteratureSearch: React.FC<LiteratureSearchProps> = ({
                 {dbPapers.map((p) => (
                   <div key={p.id} className="added-item">
                     <span className="added-item-name">
-                      {p.authors || 'Uploaded PDF'} 
+                      {p.authors || 'Uploaded PDF'}
                       <span className="added-item-subtitle"> ({p.title.slice(0, 15)}...)</span>
                     </span>
                     <span style={{ fontSize: '0.75rem', color: 'var(--accent-green)', fontWeight: 'bold' }}>PDF Seed</span>

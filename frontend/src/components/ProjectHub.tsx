@@ -10,6 +10,7 @@ import {
   resolveSupervisorFeedback, 
   addFeedbackReply, 
   saveProjectSection,
+  updateProject,
   Project, 
   GeneratedSection 
 } from '../api';
@@ -124,9 +125,30 @@ export const ProjectHub: React.FC<ProjectHubProps> = ({
     }, 1500);
 
     try {
+      if (agentName === 'reviewer') {
+        const updatedProj = await updateProject(currentProject.id, { stage: 'Reviewer' });
+        setCurrentProject(updatedProj);
+        if (onProjectUpdate) onProjectUpdate(updatedProj);
+      } else if (agentName === 'formatting') {
+        const updatedProj = await updateProject(currentProject.id, { stage: 'Formatting' });
+        setCurrentProject(updatedProj);
+        if (onProjectUpdate) onProjectUpdate(updatedProj);
+      }
+
       await runAgent(currentProject.id, agentName, instructions);
       setTimeout(async () => {
         clearInterval(logInterval);
+        
+        if (agentName === 'formatting') {
+          try {
+            const completedProj = await updateProject(currentProject.id, { stage: 'Completed' });
+            setCurrentProject(completedProj);
+            if (onProjectUpdate) onProjectUpdate(completedProj);
+          } catch (e) {
+            console.error("Failed to set stage to Completed:", e);
+          }
+        }
+        
         await refreshAllData();
         setAgentRunning(false);
         setRunningAgentName('');
@@ -140,6 +162,41 @@ export const ProjectHub: React.FC<ProjectHubProps> = ({
       setRunningSectionName('');
       alert(`Agent execution failed: ${err.message || err}`);
     }
+  };
+
+  const handleDraftAllSections = async () => {
+    if (agentRunning) return;
+    const undraftedSections = defaultSectionsList.filter(name =>
+      !sections.some(s => s.section_name.toLowerCase() === name.toLowerCase())
+    );
+    if (undraftedSections.length === 0) {
+      alert('All sections have already been drafted!');
+      return;
+    }
+    for (const sectionName of undraftedSections) {
+      setAgentRunning(true);
+      setRunningAgentName('writing');
+      setRunningSectionName(sectionName);
+      setDraftProgress(5);
+      setLogs([`Drafting ${sectionName}...`]);
+      const logInterval = setInterval(() => { pollLogs(); }, 1500);
+      try {
+        await runAgent(currentProject.id, 'writing', sectionName);
+        clearInterval(logInterval);
+        await refreshAllData();
+      } catch (err: any) {
+        clearInterval(logInterval);
+        setAgentRunning(false);
+        setRunningAgentName('');
+        setRunningSectionName('');
+        alert(`Agent failed on section '${sectionName}': ${err.message || err}`);
+        return;
+      }
+    }
+    setAgentRunning(false);
+    setRunningAgentName('');
+    setRunningSectionName('');
+    setDraftProgress(100);
   };
 
   const handleResolveFeedback = async (feedbackId: string) => {
@@ -318,8 +375,9 @@ export const ProjectHub: React.FC<ProjectHubProps> = ({
           <div className="pipeline-cta-card glass-card" style={{ padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', border: '1px solid rgba(59, 130, 246, 0.2)', backgroundColor: 'rgba(59, 130, 246, 0.05)' }}>
             <div>
               <h4 style={{ margin: '0 0 0.25rem 0', color: 'var(--primary)' }}>Draft Generation Stage Active</h4>
-              <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>You can trigger individual section drafting using the "Draft" actions next to each chapter below.</p>
+              <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>You can trigger individual section drafting using the "Draft" actions next to each chapter below, or draft all sections at once.</p>
             </div>
+            <button className="btn-primary" onClick={handleDraftAllSections} disabled={agentRunning}>Draft All Sections</button>
           </div>
         );
       case 'Reviewer':
@@ -329,7 +387,18 @@ export const ProjectHub: React.FC<ProjectHubProps> = ({
               <h4 style={{ margin: '0 0 0.25rem 0', color: 'var(--accent-green)' }}>Peer Review Audits</h4>
               <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Invokes the Critic Agent to evaluate draft arguments, mathematical consistency, and cite layouts.</p>
             </div>
-            <button className="btn-primary" onClick={() => handleRunAgent('reviewer', 'Introduction')}>Run Peer Review</button>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button className="btn-secondary" style={{ padding: '0.4rem 1.25rem', fontSize: '0.85rem' }} onClick={() => handleRunAgent('reviewer', 'Introduction')}>Run Peer Review</button>
+              <button className="btn-primary" style={{ padding: '0.4rem 1.25rem', fontSize: '0.85rem' }} onClick={async () => {
+                try {
+                  const updatedProj = await updateProject(currentProject.id, { stage: 'Formatting' });
+                  setCurrentProject(updatedProj);
+                  if (onProjectUpdate) onProjectUpdate(updatedProj);
+                } catch (err: any) {
+                  alert(`Failed to advance stage: ${err.message || err}`);
+                }
+              }}>Proceed to Formatting</button>
+            </div>
           </div>
         );
       case 'Formatting':
@@ -525,7 +594,10 @@ export const ProjectHub: React.FC<ProjectHubProps> = ({
                 <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>Loading paper drafts...</div>
               ) : (
                 defaultSectionsList.map((name, index) => {
-                  const sectionDrafts = sections.filter(s => s.section_name.toLowerCase() === name.toLowerCase());
+                  const sectionDrafts = sections.filter(s =>
+                    s.section_name.toLowerCase() === name.toLowerCase() &&
+                    !s.content.startsWith('[No ')
+                  );
                   const latestDraft = sectionDrafts.length > 0 
                     ? sectionDrafts.reduce((prev, current) => (prev.version > current.version) ? prev : current)
                     : null;

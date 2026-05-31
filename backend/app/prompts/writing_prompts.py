@@ -12,7 +12,7 @@ Literature Context (RAG):
 Instructions:
 Draft a professional academic text for the "{section_name}" section.
 - Use a rigorous, third-person academic voice.
-- Integrate the literature context where appropriate. Use citation placeholders like [1] or (Author, Year) to match the context block sources.
+- Avoid using citation placeholders like [1] or (Author, Year). 
 - Avoid vague descriptors; be technical, specific, and clear.
 - Do not repeat the prompt or add introductory greeting remarks. Start directly with the section paragraphs.
 """

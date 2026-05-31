@@ -125,6 +125,20 @@ export async function fetchProject(projectId: number): Promise<Project> {
   return await res.json();
 }
 
+export async function updateProject(projectId: number, updates: Partial<Project>): Promise<Project> {
+  const res = await fetch(`${API_BASE}/projects/${projectId}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(updates)
+  });
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.detail || 'Failed to update project');
+  }
+  return await res.json();
+}
+
+
 export async function fetchProjectCitations(projectId: number): Promise<any[]> {
   const res = await fetch(`${API_BASE}/projects/${projectId}/citations`, {
     method: 'GET',
