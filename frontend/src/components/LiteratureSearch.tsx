@@ -33,7 +33,7 @@ export const LiteratureSearch: React.FC<LiteratureSearchProps> = ({
   onProceedToGaps
 }) => {
   const [query, setQuery] = useState(project.title);
-  const [activeSources, setActiveSources] = useState<string[]>(['Semantic Scholar']);
+  const [activeSources, setActiveSources] = useState<string[]>(['Semantic Scholar', 'arXiv', 'IEEE Xplore', 'PubMed', 'ACM DL']);
   const [results, setResults] = useState<PaperResult[]>([]);
   const [dbPapers, setDbPapers] = useState<any[]>([]);
   const [localAddedPapers, setLocalAddedPapers] = useState<PaperResult[]>([]);
@@ -72,83 +72,191 @@ export const LiteratureSearch: React.FC<LiteratureSearchProps> = ({
     handleSearch(project.title);
   }, [project.id]);
 
+  // --- Individual Source Search Functions ---
+
+  const searchSemanticScholar = async (searchQuery: string): Promise<PaperResult[]> => {
+    const res = await fetch(`https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(searchQuery)}&limit=10&fields=title,authors,citationCount,abstract,year,url`);
+    if (!res.ok) throw new Error('Semantic Scholar API failed');
+    const data = await res.json();
+    const papers = data.data || [];
+    return papers.map((p: any) => {
+      const authorNames = p.authors && p.authors.length > 0
+        ? p.authors.map((a: any) => a.name).slice(0, 3).join(', ') + (p.authors.length > 3 ? ' et al.' : '')
+        : 'Unknown Authors';
+      const citations = p.citationCount || 0;
+      const tags = ['Semantic Scholar'];
+      if (citations > 100) tags.push('Highly Cited');
+      if (p.year && p.year >= 2024) tags.push('Recent');
+      return {
+        id: p.paperId || Math.random().toString(),
+        title: p.title,
+        author: `${authorNames} - ${p.year || 'N/A'} - ${citations} citations`,
+        citations,
+        description: p.abstract || 'No abstract available.',
+        tags,
+        relevance: (citations > 100 ? 'high' : citations > 20 ? 'medium' : 'low') as 'high' | 'medium' | 'low',
+        added: false,
+        url: p.url
+      };
+    });
+  };
+
+  const searchArxiv = async (searchQuery: string): Promise<PaperResult[]> => {
+    const res = await fetch(`https://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(searchQuery)}&start=0&max_results=10`);
+    if (!res.ok) throw new Error('arXiv API failed');
+    const text = await res.text();
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(text, 'text/xml');
+    const entries = xml.querySelectorAll('entry');
+    return Array.from(entries).map((entry) => {
+      const title = entry.querySelector('title')?.textContent?.replace(/\s+/g, ' ').trim() || 'Untitled';
+      const summary = entry.querySelector('summary')?.textContent?.replace(/\s+/g, ' ').trim() || '';
+      const authorEls = entry.querySelectorAll('author');
+      const authorNames = Array.from(authorEls).map(a => a.querySelector('name')?.textContent || '').filter(Boolean).slice(0, 3);
+      const authorStr = authorNames.join(', ') + (authorEls.length > 3 ? ' et al.' : '');
+      const published = entry.querySelector('published')?.textContent || '';
+      const year = published ? new Date(published).getFullYear() : 'N/A';
+      const link = entry.querySelector('id')?.textContent || '';
+      const arxivId = link.split('/abs/').pop() || Math.random().toString();
+      return {
+        id: `arxiv-${arxivId}`,
+        title,
+        author: `${authorStr} - ${year} - arXiv`,
+        citations: 0,
+        description: summary.slice(0, 500) || 'No abstract available.',
+        tags: ['arXiv', 'Preprint'],
+        relevance: 'medium' as 'high' | 'medium' | 'low',
+        added: false,
+        url: link
+      };
+    });
+  };
+
+  const searchPubMed = async (searchQuery: string): Promise<PaperResult[]> => {
+    const searchRes = await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(searchQuery)}&retmax=10&retmode=json`);
+    if (!searchRes.ok) throw new Error('PubMed search failed');
+    const searchData = await searchRes.json();
+    const ids: string[] = searchData.esearchresult?.idlist || [];
+    if (ids.length === 0) return [];
+
+    const summaryRes = await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=${ids.join(',')}&retmode=json`);
+    if (!summaryRes.ok) throw new Error('PubMed summary failed');
+    const summaryData = await summaryRes.json();
+
+    return ids.map((id: string) => {
+      const article = summaryData.result?.[id];
+      if (!article || article.error) return null;
+      const authors = article.authors?.map((a: any) => a.name).slice(0, 3).join(', ') || 'Unknown';
+      const authorSuffix = (article.authors?.length > 3) ? ' et al.' : '';
+      const year = article.pubdate?.split(' ')[0] || 'N/A';
+      return {
+        id: `pubmed-${id}`,
+        title: article.title || 'Untitled',
+        author: `${authors}${authorSuffix} - ${year} - PubMed`,
+        citations: 0,
+        description: article.title || 'Abstract available on PubMed.',
+        tags: ['PubMed', 'Biomedical'],
+        relevance: 'medium' as 'high' | 'medium' | 'low',
+        added: false,
+        url: `https://pubmed.ncbi.nlm.nih.gov/${id}/`
+      };
+    }).filter(Boolean) as PaperResult[];
+  };
+
+  const searchIEEE = async (searchQuery: string): Promise<PaperResult[]> => {
+    const res = await fetch(`https://api.crossref.org/works?query=${encodeURIComponent(searchQuery)}&rows=10&filter=member:263&select=DOI,title,author,published-print,is-referenced-by-count,abstract`, {
+      headers: { 'User-Agent': 'ScholarAI/1.0 (mailto:scholarai@research.app)' }
+    });
+    if (!res.ok) throw new Error('IEEE/CrossRef API failed');
+    const data = await res.json();
+    const items = data.message?.items || [];
+    return items.map((item: any) => {
+      const title = item.title?.[0] || 'Untitled';
+      const authors = item.author?.map((a: any) => `${a.given || ''} ${a.family || ''}`.trim()).slice(0, 3).join(', ') || 'Unknown';
+      const authorSuffix = (item.author?.length > 3) ? ' et al.' : '';
+      const year = item['published-print']?.['date-parts']?.[0]?.[0] || 'N/A';
+      const citations = item['is-referenced-by-count'] || 0;
+      return {
+        id: `ieee-${item.DOI || Math.random().toString()}`,
+        title,
+        author: `${authors}${authorSuffix} - ${year} - ${citations} citations`,
+        citations,
+        description: item.abstract?.replace(/<[^>]*>/g, '').slice(0, 500) || 'No abstract available.',
+        tags: ['IEEE Xplore', ...(citations > 50 ? ['Highly Cited'] : [])],
+        relevance: (citations > 100 ? 'high' : citations > 20 ? 'medium' : 'low') as 'high' | 'medium' | 'low',
+        added: false,
+        url: `https://doi.org/${item.DOI}`
+      };
+    });
+  };
+
+  const searchACM = async (searchQuery: string): Promise<PaperResult[]> => {
+    const res = await fetch(`https://api.crossref.org/works?query=${encodeURIComponent(searchQuery)}&rows=10&filter=member:320&select=DOI,title,author,published-print,is-referenced-by-count,abstract`, {
+      headers: { 'User-Agent': 'ScholarAI/1.0 (mailto:scholarai@research.app)' }
+    });
+    if (!res.ok) throw new Error('ACM/CrossRef API failed');
+    const data = await res.json();
+    const items = data.message?.items || [];
+    return items.map((item: any) => {
+      const title = item.title?.[0] || 'Untitled';
+      const authors = item.author?.map((a: any) => `${a.given || ''} ${a.family || ''}`.trim()).slice(0, 3).join(', ') || 'Unknown';
+      const authorSuffix = (item.author?.length > 3) ? ' et al.' : '';
+      const year = item['published-print']?.['date-parts']?.[0]?.[0] || 'N/A';
+      const citations = item['is-referenced-by-count'] || 0;
+      return {
+        id: `acm-${item.DOI || Math.random().toString()}`,
+        title,
+        author: `${authors}${authorSuffix} - ${year} - ${citations} citations`,
+        citations,
+        description: item.abstract?.replace(/<[^>]*>/g, '').slice(0, 500) || 'No abstract available.',
+        tags: ['ACM DL', ...(citations > 50 ? ['Highly Cited'] : [])],
+        relevance: (citations > 100 ? 'high' : citations > 20 ? 'medium' : 'low') as 'high' | 'medium' | 'low',
+        added: false,
+        url: `https://doi.org/${item.DOI}`
+      };
+    });
+  };
+
+  // --- Main Search Handler (queries all active sources in parallel) ---
+
   const handleSearch = async (searchQuery: string) => {
     if (!searchQuery.trim()) return;
     setLoading(true);
     try {
-      const res = await fetch(`https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(searchQuery)}&limit=10&fields=title,authors,citationCount,abstract,year,url`);
-
       const saved = localStorage.getItem(`added_papers_${project.id}`);
       const savedList: PaperResult[] = saved ? JSON.parse(saved) : [];
       const savedIds = new Set(savedList.map(p => p.id));
 
-      if (!res.ok) throw new Error('Search API failed');
-      const data = await res.json();
-      const sspapers = data.data || [];
+      const sourceMap: Record<string, (q: string) => Promise<PaperResult[]>> = {
+        'Semantic Scholar': searchSemanticScholar,
+        'arXiv': searchArxiv,
+        'PubMed': searchPubMed,
+        'IEEE Xplore': searchIEEE,
+        'ACM DL': searchACM,
+      };
 
-      const formatted: PaperResult[] = sspapers.map((p: any) => {
-        const authorNames = p.authors && p.authors.length > 0
-          ? p.authors.map((a: any) => a.name).slice(0, 3).join(', ') + (p.authors.length > 3 ? ' et al.' : '')
-          : 'Unknown Authors';
-        const formattedAuthor = `${authorNames} - ${p.year || 'N/A'} - ${p.citationCount || 0} citations`;
+      const activeSearches = activeSources
+        .filter(src => sourceMap[src])
+        .map(src => sourceMap[src](searchQuery).catch((err) => {
+          console.warn(`${src} search failed:`, err);
+          return [] as PaperResult[];
+        }));
 
-        const tags = ['Academic Paper'];
-        if (p.citationCount > 100) tags.push('Highly Cited');
-        if (p.year && p.year >= 2024) tags.push('Recent');
+      if (activeSearches.length === 0) {
+        setResults([]);
+        return;
+      }
 
-        return {
-          id: p.paperId || Math.random().toString(),
-          title: p.title,
-          author: formattedAuthor,
-          citations: p.citationCount || 0,
-          description: p.abstract || 'No abstract summary available.',
-          tags: tags,
-          relevance: (p.citationCount > 100) ? 'high' : (p.citationCount > 20 ? 'medium' : 'low'),
-          added: savedIds.has(p.paperId),
-          url: p.url
-        };
-      });
+      const allResults = await Promise.all(activeSearches);
+      const merged = allResults.flat().map(p => ({
+        ...p,
+        added: savedIds.has(p.id)
+      }));
 
-      setResults(formatted);
+      setResults(merged);
     } catch (err) {
-      console.error('Semantic Scholar fetch failed, using fallback results:', err);
-      // Fallback local results
-      const fallbackResults: PaperResult[] = [
-        {
-          id: '1',
-          title: `Robust Visual-Inertial Odometry for UAVs in Corridor Navigation`,
-          author: 'Forster, C. et al. - IEEE Trans. Robotics - 2016 - 3,420 citations',
-          citations: 3420,
-          description: 'Establishes efficient manifold preintegration principles, critical for micro aerial vehicle operations in gps-denied zones.',
-          tags: ['High relevance', 'VIO', 'Sensor Fusion'],
-          relevance: 'high',
-          added: false
-        },
-        {
-          id: '2',
-          title: 'VINS-Mono: A Robust and Versatile Monocular Visual-Inertial State Estimator',
-          author: 'Qin, T. et al. - IEEE Trans. Robotics - 2018 - 2,890 citations',
-          citations: 2890,
-          description: 'Introduces online camera-IMU calibration and tight optimization architectures, resolving drift scales.',
-          tags: ['High relevance', 'SLAM', 'Visual-Inertial'],
-          relevance: 'high',
-          added: false
-        },
-        {
-          id: '3',
-          title: 'Active Retrieval for Factuality in Large Language Models',
-          author: 'Lewis, P. et al. - NeurIPS - 2020 - 11,420 citations',
-          citations: 11420,
-          description: 'Introduces Retrieval-Augmented Generation (RAG) paradigms for dense knowledge retrieval tasks.',
-          tags: ['Medium relevance', 'RAG', 'LLMs'],
-          relevance: 'medium',
-          added: false
-        }
-      ];
-      setResults(fallbackResults.filter(p =>
-        p.title.toLowerCase().includes(searchQuery.toLowerCase().split(' ')[0]) ||
-        searchQuery.length < 15
-      ));
+      console.error('Search failed:', err);
+      setResults([]);
     } finally {
       setLoading(false);
     }
