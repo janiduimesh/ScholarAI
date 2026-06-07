@@ -195,6 +195,18 @@ export async function runAgent(projectId: number, agentName: string, instruction
   return await res.json();
 }
 
+export async function runFullPipeline(projectId: number): Promise<any> {
+  const res = await fetch(`${API_BASE}/agents/pipeline/${projectId}`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const errBody = await res.json();
+    throw new Error(errBody.detail || 'Pipeline execution failed');
+  }
+  return await res.json();
+}
+
 export async function fetchAgentLogs(projectId: number): Promise<AgentLog[]> {
   try {
     const res = await fetch(`${API_BASE}/projects/${projectId}/agent-logs`, {

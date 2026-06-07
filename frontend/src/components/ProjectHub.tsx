@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  runAgent, 
+  runAgent,
+  runFullPipeline, 
   fetchAgentLogs, 
   fetchProject,
   fetchProjectSections, 
@@ -199,6 +200,32 @@ export const ProjectHub: React.FC<ProjectHubProps> = ({
     setDraftProgress(100);
   };
 
+  const handleRunPipeline = async () => {
+    if (agentRunning) return;
+    setAgentRunning(true);
+    setRunningAgentName('pipeline');
+    setDraftProgress(5);
+    setLogs(['Starting full pipeline: Topic → Literature → Gap → Methodology...']);
+
+    const logInterval = setInterval(() => { pollLogs(); }, 1500);
+
+    try {
+      await runFullPipeline(currentProject.id);
+      setTimeout(async () => {
+        clearInterval(logInterval);
+        await refreshAllData();
+        setAgentRunning(false);
+        setRunningAgentName('');
+        setDraftProgress(100);
+      }, 2000);
+    } catch (err: any) {
+      clearInterval(logInterval);
+      setAgentRunning(false);
+      setRunningAgentName('');
+      alert(`Pipeline execution failed: ${err.message || err}`);
+    }
+  };
+
   const handleResolveFeedback = async (feedbackId: string) => {
     try {
       const updatedProj = await resolveSupervisorFeedback(currentProject.id, feedbackId, true);
@@ -334,7 +361,10 @@ export const ProjectHub: React.FC<ProjectHubProps> = ({
               <h4 style={{ margin: '0 0 0.25rem 0', color: 'var(--primary)' }}>Topic Refinement Available</h4>
               <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>The Topic Selection Agent will refine your title, compile research objectives, and establish a formal problem statement.</p>
             </div>
-            <button className="btn-primary" onClick={() => handleRunAgent('topic')}>Run Topic Agent</button>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button className="btn-secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }} onClick={() => handleRunAgent('topic')}>Run Topic Agent</button>
+              <button className="btn-primary" onClick={handleRunPipeline}>▶ Run Full Pipeline</button>
+            </div>
           </div>
         );
       case 'Literature Review':
@@ -346,7 +376,8 @@ export const ProjectHub: React.FC<ProjectHubProps> = ({
             </div>
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               <button className="btn-secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }} onClick={onGoToLiteratureSearch}>Search Agent</button>
-              <button className="btn-primary" onClick={() => handleRunAgent('literature')}>Run Literature Agent</button>
+              <button className="btn-secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }} onClick={() => handleRunAgent('literature')}>Run Literature Agent</button>
+              <button className="btn-primary" onClick={handleRunPipeline}>▶ Run Full Pipeline</button>
             </div>
           </div>
         );
@@ -357,7 +388,10 @@ export const ProjectHub: React.FC<ProjectHubProps> = ({
               <h4 style={{ margin: '0 0 0.25rem 0', color: 'var(--accent-orange)' }}>Research Gap Identification</h4>
               <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Audits state-of-the-art baselines and maps out the open gap / core contribution structure of your paper.</p>
             </div>
-            <button className="btn-primary" onClick={() => handleRunAgent('gap')}>Run Gap Agent</button>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button className="btn-secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }} onClick={() => handleRunAgent('gap')}>Run Gap Agent</button>
+              <button className="btn-primary" onClick={handleRunPipeline}>▶ Run Full Pipeline</button>
+            </div>
           </div>
         );
       case 'Methodology':
@@ -367,7 +401,10 @@ export const ProjectHub: React.FC<ProjectHubProps> = ({
               <h4 style={{ margin: '0 0 0.25rem 0', color: 'var(--accent-peach)' }}>Methodology Formulation Pending</h4>
               <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Constructs mathematics models, estimation pipelines, algorithms, and evaluation settings.</p>
             </div>
-            <button className="btn-primary" onClick={() => handleRunAgent('methodology')}>Run Methodology Agent</button>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button className="btn-secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }} onClick={() => handleRunAgent('methodology')}>Run Methodology Agent</button>
+              <button className="btn-primary" onClick={handleRunPipeline}>▶ Run Full Pipeline</button>
+            </div>
           </div>
         );
       case 'Writing':
