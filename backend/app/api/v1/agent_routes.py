@@ -5,7 +5,7 @@ from app.database import get_db
 from app.services.auth_service import AuthService
 from app.services.project_service import ProjectService
 from app.services.agent_log_service import AgentLogService
-from app.agents.orchestrator_agent import OrchestratorAgent
+from app.agents.graph import run_research_stage, run_full_pipeline
 from app.schemas.agent_schema import AgentRunRequest, AgentRunResponse, AgentLogResponse
 from app.models.user_model import User
 
@@ -14,7 +14,7 @@ router = APIRouter(tags=["agents"])
 @router.post("/agents/run", response_model=AgentRunResponse)
 def run_agent_stage(
     request: AgentRunRequest, 
-    db: Session = Depends(get_db), 
+    db: Session = Depends(get_db),
     current_user: User = Depends(AuthService.get_current_user)
 ):
     project = ProjectService.get_project(db, request.project_id)
@@ -29,9 +29,7 @@ def run_agent_stage(
         elif request.agent_name.lower() == "formatting":
             payload["citation_style"] = request.instructions or "ieee"
             
-        orchestrator = OrchestratorAgent(db, request.project_id)
-        
-        # Maps agent name to Orchestrator stage names
+        # Maps agent name to LangGraph stage names
         agent_stage_map = {
             "topic": "Topic Selection",
             "literature": "Literature Review",
@@ -46,7 +44,7 @@ def run_agent_stage(
         if not target_stage:
             raise HTTPException(status_code=400, detail=f"Invalid agent name '{request.agent_name}'")
 
-        output = orchestrator.run_stage(target_stage, payload)
+        output = run_research_stage(db, request.project_id, target_stage, payload)
         
         return {
             "success": True,
@@ -56,11 +54,35 @@ def run_agent_stage(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Agent execution failed: {str(e)}")
 
+@router.post("/agents/pipeline/{project_id}", response_model=AgentRunResponse)
+def run_pipeline(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(AuthService.get_current_user)
+):
+    """
+    Run the full research pipeline: Topic → Literature → Gap → Methodology.
+    Stops before the Writing stage. Skips stages that are already completed.
+    """
+    project = ProjectService.get_project(db, project_id)
+    if not project or project.owner_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    try:
+        output = run_full_pipeline(db, project_id)
+        return {
+            "success": True,
+            "message": "Full pipeline executed successfully (Topic → Literature → Gap → Methodology).",
+            "output": output
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Pipeline execution failed: {str(e)}")
+
 @router.get("/projects/{project_id}/agent-logs", response_model=List[AgentLogResponse])
 def get_agent_logs(
     project_id: int, 
     limit: int = 100,
-    db: Session = Depends(get_db), 
+    db: Session = Depends(get_db),
     current_user: User = Depends(AuthService.get_current_user)
 ):
     project = ProjectService.get_project(db, project_id)
@@ -71,7 +93,7 @@ def get_agent_logs(
 @router.post("/projects/{project_id}/agent-logs/clear")
 def clear_agent_logs(
     project_id: int, 
-    db: Session = Depends(get_db), 
+    db: Session = Depends(get_db),
     current_user: User = Depends(AuthService.get_current_user)
 ):
     project = ProjectService.get_project(db, project_id)

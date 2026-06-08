@@ -14,7 +14,7 @@ router = APIRouter(tags=["exports"])
 @router.post("/export", response_model=ExportResponse)
 def export_document(
     request: ExportRequest, 
-    db: Session = Depends(get_db), 
+    db: Session = Depends(get_db),
     current_user: User = Depends(AuthService.get_current_user)
 ):
     project = ProjectService.get_project(db, request.project_id)

@@ -14,7 +14,7 @@ router = APIRouter(tags=["documents"])
 @router.get("/projects/{project_id}/sections", response_model=List[GeneratedSectionResponse])
 def get_sections(
     project_id: int, 
-    db: Session = Depends(get_db), 
+    db: Session = Depends(get_db),
     current_user: User = Depends(AuthService.get_current_user)
 ):
     project = ProjectService.get_project(db, project_id)
@@ -26,7 +26,7 @@ def get_sections(
 def get_section(
     project_id: int, 
     section_name: str,
-    db: Session = Depends(get_db), 
+    db: Session = Depends(get_db),
     current_user: User = Depends(AuthService.get_current_user)
 ):
     project = ProjectService.get_project(db, project_id)

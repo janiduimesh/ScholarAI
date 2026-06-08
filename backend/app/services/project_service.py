@@ -10,15 +10,7 @@ from app.schemas.project_schema import ProjectCreate, ProjectUpdate
 class ProjectService:
     @staticmethod
     def create_project(db: Session, project_in: ProjectCreate, owner_id: int) -> Project:
-        # Prepopulate with empty supervisor feedback array
         db_project = ProjectRepository.create(db, project_in, owner_id)
-        # Create an initial Abstract section placeholder
-        ProjectRepository.create_section_version(
-            db, 
-            project_id=db_project.id, 
-            section_name="Abstract", 
-            content="[No abstract generated yet. Use the Writing Agent to generate it.]"
-        )
         return db_project
 
     @staticmethod
