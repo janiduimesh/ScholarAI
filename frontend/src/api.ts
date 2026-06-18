@@ -284,4 +284,30 @@ export async function saveProjectSection(projectId: number, sectionName: string,
   return await res.json();
 }
 
+// --- Export Endpoints ---
 
+export async function exportDocument(projectId: number, format: string = 'docx', citationStyle: string = 'ieee'): Promise<void> {
+  const res = await fetch(`${API_BASE}/export`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      project_id: projectId,
+      format: format,
+      citation_style: citationStyle
+    })
+  });
+  if (!res.ok) {
+    const errBody = await res.json();
+    throw new Error(errBody.detail || 'Export failed');
+  }
+  const data = await res.json();
+
+  // Trigger browser download using the returned download URL
+  const downloadUrl = `http://localhost:8000${data.download_url}`;
+  const link = document.createElement('a');
+  link.href = downloadUrl;
+  link.download = data.filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
