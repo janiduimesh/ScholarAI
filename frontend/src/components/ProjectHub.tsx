@@ -12,6 +12,7 @@ import {
   addFeedbackReply, 
   saveProjectSection,
   updateProject,
+  exportDocument,
   Project, 
   GeneratedSection 
 } from '../api';
@@ -549,13 +550,19 @@ export const ProjectHub: React.FC<ProjectHubProps> = ({
               </svg>
               Share
             </button>
-            <button className="btn-primary" onClick={() => setIsPreviewingPaper(true)}>
+            <button className="btn-primary" onClick={async () => {
+              try {
+                await exportDocument(currentProject.id, 'docx', getFormatStyle().toLowerCase());
+              } catch (err: any) {
+                alert(`Export failed: ${err.message || err}`);
+              }
+            }}>
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="7 10 12 15 17 10"></polyline>
                 <line x1="12" y1="15" x2="12" y2="3"></line>
               </svg>
-              Export
+              Export DOCX
             </button>
           </div>
         </div>
@@ -737,11 +744,12 @@ export const ProjectHub: React.FC<ProjectHubProps> = ({
             <div className="supervisor-note-box" style={{ marginTop: '2rem' }}>
               <h4 className="supervisor-note-title">Supervisor feedback</h4>
               {feedbacks.length === 0 ? (
-                <div>
-                  <p className="supervisor-note-quote">
-                    "Good progress on the topic scope. Please expand the related work and add references to the literature reviews."
-                  </p>
-                  <span className="supervisor-note-author">Dr. Perera - Default Feedback</span>
+                <div style={{ textAlign: 'center', padding: '1rem 0', color: 'var(--text-muted)' }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '0.5rem', opacity: 0.5 }}>
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                  <p style={{ margin: 0, fontSize: '0.85rem' }}>No supervisor feedback yet.</p>
+                  <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.75rem' }}>Use the form below to add comments from your supervisor.</p>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.5rem' }}>

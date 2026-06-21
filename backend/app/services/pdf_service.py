@@ -13,7 +13,7 @@ class PdfService:
             raise FileNotFoundError(f"PDF file not found at {file_path}")
 
         reader = PdfReader(file_path)
-        num_pages = len(reader.pages)
+        num_pages = len(reader.pages) 
         
         full_text = []
         first_page_text = ""
