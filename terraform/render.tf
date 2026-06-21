@@ -1,12 +1,17 @@
-
 resource "render_web_service" "backend" {
   name        = "scholarai-backend"
   plan        = "free"
   region      = "oregon"
-  runtime     = "docker"
-  root_dir    = "backend"
-  repo_url    = "https://github.com/${var.github_repo}"
-  branch      = var.github_branch
+
+  runtime_source = {
+    docker = {
+      repo_url        = "https://github.com/${var.github_repo}"
+      branch          = var.github_branch
+      root_dir        = "backend"
+      docker_context  = "."
+      dockerfile_path = "Dockerfile"
+    }
+  }
 
   env_vars = {
     "DATABASE_URL"               = { value = var.database_url }

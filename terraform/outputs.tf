@@ -6,7 +6,7 @@ output "database_url" {
 
 output "backend_url" {
   description = "Render backend API base URL"
-  value       = "https://${render_web_service.backend.name}.onrender.com"
+  value       = render_web_service.backend.url
 }
 
 output "frontend_url" {
@@ -16,5 +16,5 @@ output "frontend_url" {
 
 output "api_docs_url" {
   description = "FastAPI Swagger documentation"
-  value       = "https://${render_web_service.backend.name}.onrender.com/docs"
+  value       = "${render_web_service.backend.url}/docs"
 }
