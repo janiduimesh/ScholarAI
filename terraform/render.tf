@@ -1,6 +1,3 @@
-# ──────────────────────────────────────────────────────
-# Render — FastAPI Backend Web Service
-# ──────────────────────────────────────────────────────
 
 resource "render_web_service" "backend" {
   name        = "scholarai-backend"
@@ -12,7 +9,7 @@ resource "render_web_service" "backend" {
   branch      = var.github_branch
 
   env_vars = {
-    "DATABASE_URL"               = { value = local.db_url }
+    "DATABASE_URL"               = { value = var.database_url }
     "SECRET_KEY"                 = { value = var.secret_key }
     "ALGORITHM"                  = { value = "HS256" }
     "ACCESS_TOKEN_EXPIRE_MINUTES" = { value = "120" }

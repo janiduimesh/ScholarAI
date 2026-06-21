@@ -1,10 +1,6 @@
-# ──────────────────────────────────────────────────────
-# Outputs — Printed after `terraform apply`
-# ──────────────────────────────────────────────────────
-
 output "database_url" {
   description = "Neon PostgreSQL connection string (sensitive)"
-  value       = local.db_url
+  value       = var.database_url
   sensitive   = true
 }
 

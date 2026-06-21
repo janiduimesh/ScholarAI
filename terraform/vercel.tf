@@ -1,7 +1,3 @@
-# ──────────────────────────────────────────────────────
-# Vercel — React/Vite Frontend
-# ──────────────────────────────────────────────────────
-
 resource "vercel_project" "frontend" {
   name      = "scholarai"
   framework = "vite"

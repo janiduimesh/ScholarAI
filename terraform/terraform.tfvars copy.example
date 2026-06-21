@@ -1,8 +1,0 @@
-
-neon_api_key     = ""
-render_api_key   = "rnd_wYjca7zRxBGQgUu4au1glyOGr6Lz"
-vercel_api_token = ""
-gemini_api_key   = ""
-secret_key       = "change-me-to-a-random-string"
-github_repo      = "janiduimesh/ScholarAI"
-github_branch    = "main"
