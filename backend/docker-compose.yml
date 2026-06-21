@@ -5,9 +5,7 @@ services:
     build: .
     ports:
       - "8000:8000"
-    volumes:
-      - .:/app
     environment:
-      - DATABASE_URL=sqlite:///./research_assistant.db
+      - DATABASE_URL=postgresql://user:password@host/neondb?sslmode=require
     env_file:
       - .env

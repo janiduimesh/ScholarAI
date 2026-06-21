@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
 
 class Settings(BaseSettings):
-    DATABASE_URL: str = "sqlite:///./research_assistant.db"
+    DATABASE_URL: str = "postgresql://user:password@host/neondb?sslmode=require"
     SECRET_KEY: str = "dev_secret_key_987654321_ai_research_assistant"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 120
