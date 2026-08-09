@@ -15,7 +15,6 @@ class GapAnalysisAgent(BaseAgent):
         if not project:
             raise ValueError("Project not found")
 
-        # Heuristic fallback if synthesis is empty: load from papers
         if not literature_synthesis:
             from app.services.rag_service import RagService
             literature_synthesis = RagService.get_all_papers_summary(self.db, self.project_id)
@@ -28,7 +27,6 @@ class GapAnalysisAgent(BaseAgent):
         self.log_info("Evaluating limitations in state-of-the-art baselines...", "Audit")
         gap_markdown = self.call_llm(prompt)
         
-        # Save gap analysis details
         ProjectRepository.update(
             self.db,
             project,

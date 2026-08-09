@@ -1,9 +1,5 @@
-# ──────────────────────────────────────────────────────
-# Input Variables — set these in terraform.tfvars
-# ──────────────────────────────────────────────────────
-
-variable "neon_api_key" {
-  description = "Neon API key (from https://console.neon.tech/app/settings/api-keys)"
+variable "database_url" {
+  description = "Neon PostgreSQL connection string for the database"
   type        = string
   sensitive   = true
 }
@@ -12,6 +8,11 @@ variable "render_api_key" {
   description = "Render API key (from https://dashboard.render.com/u/settings#api-keys)"
   type        = string
   sensitive   = true
+}
+
+variable "render_owner_id" {
+  description = "Render Owner ID (starts with usr- or tea-, from https://dashboard.render.com/u/settings)"
+  type        = string
 }
 
 variable "vercel_api_token" {
@@ -46,8 +47,4 @@ variable "secret_key" {
   default     = "change-me-in-production-to-a-random-string"
 }
 
-variable "neon_region" {
-  description = "Neon database region"
-  type        = string
-  default     = "aws-us-east-1"
-}
+

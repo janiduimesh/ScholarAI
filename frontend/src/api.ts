@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:8000/api/v1';
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000/api/v1';
 
 export interface Project {
   id: number;
@@ -303,7 +303,8 @@ export async function exportDocument(projectId: number, format: string = 'docx',
   const data = await res.json();
 
   // Trigger browser download using the returned download URL
-  const downloadUrl = `http://localhost:8000${data.download_url}`;
+  const baseOrigin = API_BASE.replace(/\/api\/v1\/?$/, '');
+  const downloadUrl = `${baseOrigin}${data.download_url}`;
   const link = document.createElement('a');
   link.href = downloadUrl;
   link.download = data.filename;

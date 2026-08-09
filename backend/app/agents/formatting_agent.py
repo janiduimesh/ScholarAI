@@ -13,7 +13,6 @@ class FormattingAgent(BaseAgent):
         if not project:
             raise ValueError("Project not found")
 
-        # Basic style guidelines print
         self.log_info("Applying formatting guidelines: margins, double-column grid, font sizes...", "Layout")
         
         if citation_style.lower() == "ieee":
@@ -24,7 +23,7 @@ class FormattingAgent(BaseAgent):
 - Citations: Numeric brackets, e.g. [1], [2], numbered sequentially by appearance.
 - Reference List: Numbered items, ordered by citation sequence.
 """
-        else: # APA
+        else:
             guidelines = """# APA Formatting Rules Applied:
 - Font: Times New Roman, 12pt
 - Columns: Single column layout, double-spaced

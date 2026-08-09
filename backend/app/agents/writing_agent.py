@@ -15,7 +15,6 @@ class WritingAgent(BaseAgent):
         if not project:
             raise ValueError("Project not found")
 
-        # 1. Fetch relevant literature context using RAG
         self.log_info(f"Searching citation database for context matching '{section_name}'...", "RAG Search")
         rag_context = RagService.get_context_for_query(
             self.db, 
@@ -24,7 +23,6 @@ class WritingAgent(BaseAgent):
             limit=4
         )
 
-        # 2. Assemble Writing Prompt
         prompt = WRITING_DRAFT_PROMPT.format(
             section_name=section_name,
             topic=project.title,
@@ -33,11 +31,9 @@ class WritingAgent(BaseAgent):
             rag_context=rag_context
         )
 
-        # 3. Call LLM
         self.log_info(f"Drafting formal content for {section_name}...", "Generation")
         draft_content = self.call_llm(prompt)
         
-        # 4. Save to versioned database
         db_section = ProjectRepository.create_section_version(
             self.db, 
             project_id=self.project_id, 
