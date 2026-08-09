@@ -1,5 +1,9 @@
 # ScholarAI — Multi-Agent Academic Writing Assistant
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/janiduimesh/ScholarAI/janidu/frontend/public/cover.jfif" alt="ScholarAI Cover" width="100%" />
+</p>
+
 An AI-powered research assistant that automates the academic paper writing workflow using a multi-agent pipeline. Built with **FastAPI**, **React/TypeScript**, **LangGraph**, and **Google Gemini 2.5 Flash**.
 
 ## Architecture
