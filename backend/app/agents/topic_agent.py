@@ -17,16 +17,13 @@ class TopicAgent(BaseAgent):
 
         self.log_info(f"Analyzing user raw topic: '{project.title}'", "Analysis")
         
-        # Build prompt
         prompt = TOPIC_REFINEMENT_PROMPT.format(
             topic=project.title,
             description=project.description or "No description provided."
         )
 
-        # Call LLM
         refined_markdown = self.call_llm(prompt)
         
-        # Save to database
         ProjectRepository.update(
             self.db, 
             project, 

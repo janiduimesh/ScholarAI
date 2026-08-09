@@ -20,7 +20,6 @@ class ReviewerAgent(BaseAgent):
             self.log_warning(f"No draft found for section '{section_name}'. Cannot review.", "Empty")
             return "No content to review. Please write draft first."
 
-        # Fetch citation context list
         literature_context = RagService.get_all_papers_summary(self.db, self.project_id)
 
         prompt = REVIEWER_AUDIT_PROMPT.format(

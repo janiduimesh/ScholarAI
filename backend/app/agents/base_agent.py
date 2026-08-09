@@ -27,7 +27,6 @@ class BaseAgent:
         Returns the LLM response or raises an error with a relevant message.
         """
 
-        # --- Validate Configuration ---
         if settings.LLM_PROVIDER != "gemini" or not settings.GEMINI_API_KEY:
             error_msg = (
                 "LLM not configured. Please set LLM_PROVIDER=gemini and provide "
@@ -36,7 +35,6 @@ class BaseAgent:
             self.log_warning(error_msg, "Config Error")
             raise ValueError(error_msg)
 
-        # --- Call Gemini LLM ---
         try:
             self.log_thinking("Connecting to Gemini API...", "API Call")
 

@@ -24,7 +24,6 @@ class MethodologyAgent(BaseAgent):
 
         methodology_markdown = self.call_llm(prompt)
 
-        # Save methodology details
         ProjectRepository.update(
             self.db,
             project,

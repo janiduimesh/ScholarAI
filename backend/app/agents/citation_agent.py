@@ -20,7 +20,6 @@ class CitationAgent(BaseAgent):
 
         response = self.call_llm(prompt)
         
-        # Parse JSON block from LLM
         parsed = extract_json_block(response)
         
         if parsed:
@@ -30,7 +29,6 @@ class CitationAgent(BaseAgent):
                 self.log_warning(f"Assertion not supported: {parsed.get('explanation')}", "Conflict")
             return parsed
         else:
-            # Fallback output
             fallback = {"supported": True, "explanation": "Verification complete. Baseline matching suggests strong correlation."}
             self.log_success(fallback["explanation"], "Valid")
             return fallback

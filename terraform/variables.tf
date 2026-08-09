@@ -10,6 +10,11 @@ variable "render_api_key" {
   sensitive   = true
 }
 
+variable "render_owner_id" {
+  description = "Render Owner ID (starts with usr- or tea-, from https://dashboard.render.com/u/settings)"
+  type        = string
+}
+
 variable "vercel_api_token" {
   description = "Vercel API token (from https://vercel.com/account/tokens)"
   type        = string

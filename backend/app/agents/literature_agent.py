@@ -20,7 +20,6 @@ class LiteratureAgent(BaseAgent):
         papers = PaperRepository.get_by_project(self.db, self.project_id)
         self.log_info(f"Loaded {len(papers)} uploaded scientific papers.", "Read Reference")
 
-        # Compile summaries
         papers_summary = RagService.get_all_papers_summary(self.db, self.project_id)
         
         prompt = LITERATURE_SEARCH_PROMPT.format(
@@ -31,12 +30,10 @@ class LiteratureAgent(BaseAgent):
         self.log_info("Synthesizing citations and mapping claim structures...", "Synthesis")
         synthesis = self.call_llm(prompt)
         
-        # We auto-add these citations to the citation database
         for paper in papers:
             from app.services.citation_service import CitationService
             CitationService.add_citation_from_paper(self.db, self.project_id, paper.title, paper.authors, paper.year)
         
-        # Update stage
         ProjectRepository.update(
             self.db,
             project,

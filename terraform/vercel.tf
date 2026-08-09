@@ -13,9 +13,10 @@ resource "vercel_project" "frontend" {
 
   environment = [
     {
-      key    = "VITE_API_BASE"
-      value  = "${render_web_service.backend.url}/api/v1"
-      target = ["production", "preview"]
+      key       = "VITE_API_BASE"
+      value     = "${render_web_service.backend.url}/api/v1"
+      target    = ["production", "preview"]
+      sensitive = false
     }
   ]
 }
