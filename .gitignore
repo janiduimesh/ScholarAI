@@ -47,14 +47,14 @@ venv.bak/
 *.sqlite3
 
 # Local storage and user uploaded papers
-backend/app/storage/uploaded_papers/*
-backend/app/storage/generated_docs/*
-backend/app/storage/temp/*
+backend/storage/uploaded_papers/*
+backend/storage/generated_docs/*
+backend/storage/temp/*
 
 # Keep storage folders but ignore contents
-!backend/app/storage/uploaded_papers/.gitkeep
-!backend/app/storage/generated_docs/.gitkeep
-!backend/app/storage/temp/.gitkeep
+!backend/storage/uploaded_papers/.gitkeep
+!backend/storage/generated_docs/.gitkeep
+!backend/storage/temp/.gitkeep
 
 # IDEs & System files
 .vscode/
